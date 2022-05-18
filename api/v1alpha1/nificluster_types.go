@@ -504,6 +504,8 @@ type NifiClusterStatus struct {
 	RootProcessGroupId string `json:"rootProcessGroupId,omitempty"`
 	// PrometheusReportingTask contains the status of the prometheus reporting task managed by the operator
 	PrometheusReportingTask PrometheusReportingTaskStatus `json:"prometheusReportingTask,omitempty"`
+	// Certificate revision status contains the number of revision of the certificate (renewal)
+	ClusterRevision int `json:"revision,omitempty"`
 }
 
 type PrometheusReportingTaskStatus struct {

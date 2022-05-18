@@ -20,8 +20,32 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+func (c *certManager) IsCertificateExpired(ctx context.Context, logger logr.Logger) bool {
+	logger.Info("Checking if the certificate is expired")
+
+	cert := &certv1.Certificate{}
+
+	objName := types.NamespacedName{
+		Name:      fmt.Sprintf(pkicommon.NodeCACertTemplate, c.cluster.Name),
+		Namespace: c.cluster.Namespace}
+
+	if err := c.client.Get(ctx, objName, cert); err != nil {
+		if apierrors.IsNotFound(err) {
+			logger.Info("No certificate found")
+		}
+		return false
+	}
+	if *cert.Status.Revision > c.cluster.Status.ClusterRevision {
+		// c.cluster.Status.ClusterRevision++
+		return true
+	}
+	return false
+}
+
 func (c *certManager) FinalizePKI(ctx context.Context, logger logr.Logger) error {
 	logger.Info("Removing cert-manager certificates and secrets")
+
+	// Logic get certmanager info PL
 
 	// Safety check that we are actually doing something
 	if c.cluster.Spec.ListenersConfig.SSLSecrets == nil {
@@ -48,6 +72,7 @@ func (c *certManager) FinalizePKI(ctx context.Context, logger logr.Logger) error
 			// Delete the certificates first so we don't accidentally recreate the
 			// secret after it gets deleted
 			cert := &certv1.Certificate{}
+			// HERE PL
 			if err := c.client.Get(ctx, obj, cert); err != nil {
 				if apierrors.IsNotFound(err) {
 					continue

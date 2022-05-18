@@ -610,7 +610,8 @@ func (r *Reconciler) reconcileNifiPod(log logr.Logger, desiredPod *corev1.Pod) (
 			log.Error(err, "could not match objects", "kind", desiredType)
 		} else if patchResult.IsEmpty() {
 			if !k8sutil.IsPodTerminatedOrShutdown(currentPod) &&
-				r.NifiCluster.Status.NodesState[currentPod.Labels["nodeId"]].ConfigurationState == v1alpha1.ConfigInSync {
+				r.NifiCluster.Status.NodesState[currentPod.Labels["nodeId"]].ConfigurationState == v1alpha1.ConfigInSync &&
+				!pki.GetPKIManager(r.Client, r.NifiCluster).IsCertificateExpired(context.TODO(), log) {
 
 				if val, found := r.NifiCluster.Status.NodesState[desiredPod.Labels["nodeId"]]; found &&
 					val.GracefulActionState.State == v1alpha1.GracefulUpscaleRunning &&

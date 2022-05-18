@@ -52,6 +52,9 @@ type Manager interface {
 
 	// GetControllerTLSConfig retrieves a TLS configuration for a controller nifi client
 	GetControllerTLSConfig() (*tls.Config, error)
+
+	// IsCertificateExpired return true is the certificate of the cluster has expired
+	IsCertificateExpired(ctx context.Context, logger logr.Logger) bool
 }
 
 // UserCertificate is a struct representing the key components of a user TLS certificate

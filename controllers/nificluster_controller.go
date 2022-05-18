@@ -18,8 +18,10 @@ package controllers
 
 import (
 	"context"
-	"emperror.dev/errors"
 	"fmt"
+	"time"
+
+	"emperror.dev/errors"
 	"github.com/konpyutaika/nifikop/pkg/errorfactory"
 	"github.com/konpyutaika/nifikop/pkg/k8sutil"
 	"github.com/konpyutaika/nifikop/pkg/pki"
@@ -31,7 +33,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -82,6 +83,8 @@ func (r *NifiClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// Fetch the NifiCluster instance
 	instance := &v1alpha1.NifiCluster{}
+
+	// pass a certificate instead of instance PL
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -256,6 +259,7 @@ func (r *NifiClusterReconciler) checkFinalizers(ctx context.Context,
 		// user finalizations are done before it does its final cleanup
 		interval := util.GetRequeueInterval(r.RequeueIntervals["CLUSTER_TASK_NOT_READY_REQUEUE_INTERVAL"]/3, r.RequeueOffset)
 		r.Log.Info("Tearing down any PKI resources for the nificluster")
+		// PL
 		if err = pki.GetPKIManager(r.Client, cluster).FinalizePKI(ctx, r.Log); err != nil {
 			switch err.(type) {
 			case errorfactory.ResourceNotReady:
