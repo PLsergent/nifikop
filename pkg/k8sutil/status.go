@@ -3,9 +3,10 @@ package k8sutil
 import (
 	"context"
 	"fmt"
-	"github.com/konpyutaika/nifikop/api/v1alpha1"
 	"strings"
 	"time"
+
+	"github.com/konpyutaika/nifikop/api/v1alpha1"
 
 	"emperror.dev/errors"
 	"github.com/go-logr/logr"
@@ -184,6 +185,8 @@ func UpdateCRStatus(c client.Client, cluster *v1alpha1.NifiCluster, state interf
 	switch s := state.(type) {
 	case v1alpha1.ClusterState:
 		cluster.Status.State = s
+	case time.Time:
+		cluster.Status.CertificateExpireDate = s
 	}
 
 	err := c.Status().Update(context.Background(), cluster)
@@ -204,6 +207,8 @@ func UpdateCRStatus(c client.Client, cluster *v1alpha1.NifiCluster, state interf
 		switch s := state.(type) {
 		case v1alpha1.ClusterState:
 			cluster.Status.State = s
+		case time.Time:
+			cluster.Status.CertificateExpireDate = s
 		}
 
 		err = updateClusterStatus(c, cluster)

@@ -3,21 +3,24 @@ package certmanagerpki
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	certv1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1"
 	certmeta "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
 	"github.com/konpyutaika/nifikop/api/v1alpha1"
 	"github.com/konpyutaika/nifikop/pkg/errorfactory"
+	"github.com/konpyutaika/nifikop/pkg/k8sutil"
 	"github.com/konpyutaika/nifikop/pkg/resources/templates"
 	pkicommon "github.com/konpyutaika/nifikop/pkg/util/pki"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func (c *certManager) IsCertificateExpired(ctx context.Context, logger logr.Logger) bool {
@@ -35,8 +38,19 @@ func (c *certManager) IsCertificateExpired(ctx context.Context, logger logr.Logg
 		}
 		return false
 	}
-	if *cert.Status.Revision > c.cluster.Status.ClusterRevision {
-		// c.cluster.Status.ClusterRevision++
+
+	if c.cluster.Status.CertificateExpireDate.IsZero() {
+		if err := k8sutil.UpdateCRStatus(c.client, c.cluster, cert.Status.RenewalTime.Time, logger); err != nil {
+			// RequeueWithError(logger, err.Error(), err)
+			logger.Error(err, "Fail to update CertificateExpireDate")
+		}
+	}
+
+	if c.cluster.Status.CertificateExpireDate.Before(time.Now()) {
+		if err := k8sutil.UpdateCRStatus(c.client, c.cluster, cert.Status.RenewalTime.Time, logger); err != nil {
+			// RequeueWithError(logger, err.Error(), err)
+			logger.Error(err, "Fail to update CertificateExpireDate")
+		}
 		return true
 	}
 	return false
@@ -44,8 +58,6 @@ func (c *certManager) IsCertificateExpired(ctx context.Context, logger logr.Logg
 
 func (c *certManager) FinalizePKI(ctx context.Context, logger logr.Logger) error {
 	logger.Info("Removing cert-manager certificates and secrets")
-
-	// Logic get certmanager info PL
 
 	// Safety check that we are actually doing something
 	if c.cluster.Spec.ListenersConfig.SSLSecrets == nil {
@@ -72,7 +84,6 @@ func (c *certManager) FinalizePKI(ctx context.Context, logger logr.Logger) error
 			// Delete the certificates first so we don't accidentally recreate the
 			// secret after it gets deleted
 			cert := &certv1.Certificate{}
-			// HERE PL
 			if err := c.client.Get(ctx, obj, cert); err != nil {
 				if apierrors.IsNotFound(err) {
 					continue

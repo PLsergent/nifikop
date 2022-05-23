@@ -84,7 +84,6 @@ func (r *NifiClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Fetch the NifiCluster instance
 	instance := &v1alpha1.NifiCluster{}
 
-	// pass a certificate instead of instance PL
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -259,7 +258,6 @@ func (r *NifiClusterReconciler) checkFinalizers(ctx context.Context,
 		// user finalizations are done before it does its final cleanup
 		interval := util.GetRequeueInterval(r.RequeueIntervals["CLUSTER_TASK_NOT_READY_REQUEUE_INTERVAL"]/3, r.RequeueOffset)
 		r.Log.Info("Tearing down any PKI resources for the nificluster")
-		// PL
 		if err = pki.GetPKIManager(r.Client, cluster).FinalizePKI(ctx, r.Log); err != nil {
 			switch err.(type) {
 			case errorfactory.ResourceNotReady:

@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	cmmeta "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -504,8 +505,8 @@ type NifiClusterStatus struct {
 	RootProcessGroupId string `json:"rootProcessGroupId,omitempty"`
 	// PrometheusReportingTask contains the status of the prometheus reporting task managed by the operator
 	PrometheusReportingTask PrometheusReportingTaskStatus `json:"prometheusReportingTask,omitempty"`
-	// Certificate revision status contains the number of revision of the certificate (renewal)
-	ClusterRevision int `json:"revision,omitempty"`
+	// Certificate expire date contains the date when the certificate should be renewed
+	CertificateExpireDate time.Time `json:"certificateExpireDate,omitempty"`
 }
 
 type PrometheusReportingTaskStatus struct {
