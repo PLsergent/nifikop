@@ -185,7 +185,7 @@ func UpdateCRStatus(c client.Client, cluster *v1alpha1.NifiCluster, state interf
 	switch s := state.(type) {
 	case v1alpha1.ClusterState:
 		cluster.Status.State = s
-	case time.Time:
+	case string:
 		cluster.Status.CertificateExpireDate = s
 	}
 
@@ -207,7 +207,7 @@ func UpdateCRStatus(c client.Client, cluster *v1alpha1.NifiCluster, state interf
 		switch s := state.(type) {
 		case v1alpha1.ClusterState:
 			cluster.Status.State = s
-		case time.Time:
+		case string:
 			cluster.Status.CertificateExpireDate = s
 		}
 

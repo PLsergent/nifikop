@@ -26,6 +26,7 @@ import (
 func (c *certManager) IsCertificateExpired(ctx context.Context, logger logr.Logger) bool {
 	logger.Info("Checking if the certificate is expired")
 
+	// Get certificate object
 	cert := &certv1.Certificate{}
 
 	objName := types.NamespacedName{
@@ -39,16 +40,31 @@ func (c *certManager) IsCertificateExpired(ctx context.Context, logger logr.Logg
 		return false
 	}
 
-	if c.cluster.Status.CertificateExpireDate.IsZero() {
-		if err := k8sutil.UpdateCRStatus(c.client, c.cluster, cert.Status.RenewalTime.Time, logger); err != nil {
-			// RequeueWithError(logger, err.Error(), err)
+	// Set certificate renewal time format RFC3339: “2006-01-02T15:04:05Z07:00”
+	certRenewalTime := cert.Status.RenewalTime.Time.Format(time.RFC3339)
+
+	// If CertificateExpireDate is empty, assign current certificate renewal time
+	if c.cluster.Status.CertificateExpireDate == "" {
+		if err := k8sutil.UpdateCRStatus(c.client, c.cluster, certRenewalTime, logger); err != nil {
 			logger.Error(err, "Fail to update CertificateExpireDate")
+			return false
 		}
 	}
 
-	if c.cluster.Status.CertificateExpireDate.Before(time.Now()) {
-		if err := k8sutil.UpdateCRStatus(c.client, c.cluster, cert.Status.RenewalTime.Time, logger); err != nil {
-			// RequeueWithError(logger, err.Error(), err)
+	// Get and parse CertificateExpireDate
+	t, errDate := time.Parse(time.RFC3339, c.cluster.Status.CertificateExpireDate)
+
+	if errDate != nil {
+		if err := k8sutil.UpdateCRStatus(c.client, c.cluster, "", logger); err != nil {
+			logger.Error(err, "Fail to update CertificateExpireDate")
+		}
+		logger.Error(errDate, "Fail to convert string CertificateExpireDate to time.Time format")
+		return false
+	}
+
+	// Check if CertificateExpireDate is before now, if yes return true and update value
+	if t.Before(time.Now()) {
+		if err := k8sutil.UpdateCRStatus(c.client, c.cluster, certRenewalTime, logger); err != nil {
 			logger.Error(err, "Fail to update CertificateExpireDate")
 		}
 		return true
