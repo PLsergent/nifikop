@@ -23,10 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func (c *certManager) IsCertificateExpired(ctx context.Context, logger logr.Logger) bool {
-	logger.Info("Checking if the certificate is expired")
-
-	// Get certificate object
+func (c *certManager) GetCertificate(ctx context.Context, logger logr.Logger) (certv1.Certificate, error) {
 	cert := &certv1.Certificate{}
 
 	objName := types.NamespacedName{
@@ -35,41 +32,75 @@ func (c *certManager) IsCertificateExpired(ctx context.Context, logger logr.Logg
 
 	if err := c.client.Get(ctx, objName, cert); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Info("No certificate found")
+			logger.Error(err, "No certificate found")
+			return *cert, err
 		}
-		return false
 	}
+	return *cert, nil
+}
 
-	// Set certificate renewal time format RFC3339: “2006-01-02T15:04:05Z07:00”
-	certRenewalTime := cert.Status.RenewalTime.Time.Format(time.RFC3339)
-
+func (c *certManager) InitCertificateStatusDate(ctx context.Context, logger logr.Logger) error {
 	// If CertificateExpireDate is empty, assign current certificate renewal time
 	if c.cluster.Status.CertificateExpireDate == "" {
+
+		cert, err := c.GetCertificate(ctx, logger)
+
+		if err != nil {
+			logger.Error(err, "No certificate found")
+			return err
+		}
+
+		// Set certificate renewal time format RFC3339: “2006-01-02T15:04:05Z07:00”
+		certRenewalTime := cert.Status.RenewalTime.Time.Format(time.RFC3339)
+
 		if err := k8sutil.UpdateCRStatus(c.client, c.cluster, certRenewalTime, logger); err != nil {
 			logger.Error(err, "Fail to update CertificateExpireDate")
-			return false
+			return err
 		}
 	}
+	return nil
+}
 
-	// Get and parse CertificateExpireDate
-	t, errDate := time.Parse(time.RFC3339, c.cluster.Status.CertificateExpireDate)
+func (c *certManager) IsCertificateExpired(ctx context.Context, logger logr.Logger) bool {
+	logger.Info("Checking if the certificate is expired")
 
-	if errDate != nil {
-		if err := k8sutil.UpdateCRStatus(c.client, c.cluster, "", logger); err != nil {
-			logger.Error(err, "Fail to update CertificateExpireDate")
-		}
-		logger.Error(errDate, "Fail to convert string CertificateExpireDate to time.Time format")
+	// Get certificate object
+	cert, err := c.GetCertificate(ctx, logger)
+
+	if err != nil {
+		logger.Error(err, "No certificate found")
 		return false
 	}
 
-	// Check if CertificateExpireDate is before now, if yes return true and update value
-	if t.Before(time.Now()) {
+	// Get certificate renewal w/ time format RFC3339: “2006-01-02T15:04:05Z07:00”
+	certRenewalTime := cert.Status.RenewalTime.Time.Format(time.RFC3339)
+
+	certificateExpireDate := c.cluster.Status.CertificateExpireDate
+
+	// Compare with certRenewalTime, if != will trigger rolling upgrade
+	return certificateExpireDate != certRenewalTime
+}
+
+func (c *certManager) UpdateCertificateStatusDate(ctx context.Context, logger logr.Logger) error {
+	cert, err := c.GetCertificate(ctx, logger)
+
+	if err != nil {
+		logger.Info("No certificate found")
+		return err
+	}
+
+	// Get certificate renewal w/ time format RFC3339: “2006-01-02T15:04:05Z07:00”
+	certRenewalTime := cert.Status.RenewalTime.Time.Format(time.RFC3339)
+
+	certificateExpireDate := c.cluster.Status.CertificateExpireDate
+
+	if certificateExpireDate != certRenewalTime {
 		if err := k8sutil.UpdateCRStatus(c.client, c.cluster, certRenewalTime, logger); err != nil {
 			logger.Error(err, "Fail to update CertificateExpireDate")
+			return err
 		}
-		return true
 	}
-	return false
+	return nil
 }
 
 func (c *certManager) FinalizePKI(ctx context.Context, logger logr.Logger) error {

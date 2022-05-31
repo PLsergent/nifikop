@@ -51,10 +51,6 @@ func newMockPKIManager(client client.Client, cluster *v1alpha1.NifiCluster) pki.
 	return &mockPKIManager{client: client, cluster: cluster}
 }
 
-func (m *mockPKIManager) IsCertificateExpired(ctx context.Context, logger logr.Logger) bool {
-	return false
-}
-
 func (m *mockPKIManager) ReconcilePKI(ctx context.Context, logger logr.Logger, scheme *runtime.Scheme, externalHostnames []string) error {
 	return nil
 }

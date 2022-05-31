@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	certv1 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/konpyutaika/nifikop/api/v1alpha1"
 	"github.com/konpyutaika/nifikop/pkg/resources/templates"
 	certutil "github.com/konpyutaika/nifikop/pkg/util/cert"
@@ -55,6 +56,15 @@ type Manager interface {
 
 	// IsCertificateExpired return true is the certificate of the cluster has expired
 	IsCertificateExpired(ctx context.Context, logger logr.Logger) bool
+
+	// InitCertificateStatusDate initiate the certificate expire date in the cluster status
+	InitCertificateStatusDate(ctx context.Context, logger logr.Logger) error
+
+	// GetCertificate get the cert manager certificate object
+	GetCertificate(ctx context.Context, logger logr.Logger) (certv1.Certificate, error)
+
+	// UpdateCertificateStatusDate update certificate expire date after rolling upgrade
+	UpdateCertificateStatusDate(ctx context.Context, logger logr.Logger) error
 }
 
 // UserCertificate is a struct representing the key components of a user TLS certificate

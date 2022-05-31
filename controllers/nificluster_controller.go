@@ -116,6 +116,9 @@ func (r *NifiClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				return RequeueWithError(r.Log, err.Error(), err)
 			}
 		}
+		if err := pki.GetPKIManager(r.Client, instance).InitCertificateStatusDate(context.TODO(), r.Log); err != nil {
+			return RequeueWithError(r.Log, err.Error(), err)
+		}
 		if err := k8sutil.UpdateCRStatus(r.Client, instance, v1alpha1.NifiClusterInitialized, r.Log); err != nil {
 			return RequeueWithError(r.Log, err.Error(), err)
 		}
@@ -177,8 +180,12 @@ func (r *NifiClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return RequeueWithError(r.Log, "failed to ensure finalizers on nificluster instance", err)
 	}
 
-	//Update rolling upgrade last successful state
+	// Update rolling upgrade last successful state
 	if instance.Status.State == v1alpha1.NifiClusterRollingUpgrading {
+		if err := pki.GetPKIManager(r.Client, instance).UpdateCertificateStatusDate(context.TODO(), r.Log); err != nil {
+			return RequeueWithError(r.Log, err.Error(), err)
+		}
+
 		if err := k8sutil.UpdateRollingUpgradeState(r.Client, instance, time.Now(), r.Log); err != nil {
 			return RequeueWithError(r.Log, err.Error(), err)
 		}
