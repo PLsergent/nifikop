@@ -106,18 +106,26 @@ func (r *NifiClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			RequeueAfter: time.Duration(15) * time.Second,
 		}, nil
 	}
-	//
+
 	if len(instance.Status.State) == 0 || instance.Status.State == v1alpha1.NifiClusterInitializing {
 		if err := k8sutil.UpdateCRStatus(r.Client, instance, v1alpha1.NifiClusterInitializing, r.Log); err != nil {
 			return RequeueWithError(r.Log, err.Error(), err)
 		}
+
+		cert, err := pki.GetPKIManager(r.Client, instance).GetCertificate(ctx, r.Log)
+		if err != nil {
+			return RequeueWithError(r.Log, err.Error(), err)
+		}
+		certRenewalTime := v1alpha1.CertificateExpireDate(cert.Status.RenewalTime.Time.Format(time.RFC3339))
+
 		for nId := range instance.Spec.Nodes {
 			if err := k8sutil.UpdateNodeStatus(r.Client, []string{fmt.Sprint(instance.Spec.Nodes[nId].Id)}, instance, v1alpha1.IsInitClusterNode, r.Log); err != nil {
 				return RequeueWithError(r.Log, err.Error(), err)
 			}
-		}
-		if err := pki.GetPKIManager(r.Client, instance).InitCertificateStatusDate(context.TODO(), r.Log); err != nil {
-			return RequeueWithError(r.Log, err.Error(), err)
+
+			if err := k8sutil.UpdateNodeStatus(r.Client, []string{fmt.Sprint(instance.Spec.Nodes[nId].Id)}, instance, certRenewalTime, r.Log); err != nil {
+				return RequeueWithError(r.Log, err.Error(), err)
+			}
 		}
 		if err := k8sutil.UpdateCRStatus(r.Client, instance, v1alpha1.NifiClusterInitialized, r.Log); err != nil {
 			return RequeueWithError(r.Log, err.Error(), err)
@@ -182,10 +190,6 @@ func (r *NifiClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// Update rolling upgrade last successful state
 	if instance.Status.State == v1alpha1.NifiClusterRollingUpgrading {
-		if err := pki.GetPKIManager(r.Client, instance).UpdateCertificateStatusDate(context.TODO(), r.Log); err != nil {
-			return RequeueWithError(r.Log, err.Error(), err)
-		}
-
 		if err := k8sutil.UpdateRollingUpgradeState(r.Client, instance, time.Now(), r.Log); err != nil {
 			return RequeueWithError(r.Log, err.Error(), err)
 		}

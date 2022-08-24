@@ -28,6 +28,9 @@ type ClusterState string
 // ConfigurationState holds info about the configuration state
 type ConfigurationState string
 
+// Certificate expire date contains the date when the certificate should be renewed
+type CertificateExpireDate string
+
 //  InitClusterNode holds info about if the node was part of the init cluster setup
 type InitClusterNode bool
 
@@ -325,6 +328,8 @@ type NodeState struct {
 	InitClusterNode InitClusterNode `json:"initClusterNode"`
 	// PodIsReady whether or not the associated pod is ready
 	PodIsReady bool `json:"podIsReady"`
+	// Certificate expire date contains the date when the certificate should be renewed
+	CertificateExpireDate CertificateExpireDate `json:"certificateExpireDate,omitempty"`
 }
 
 // RackAwarenessState holds info about rack awareness status

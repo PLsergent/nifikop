@@ -39,29 +39,7 @@ func (c *certManager) GetCertificate(ctx context.Context, logger logr.Logger) (c
 	return *cert, nil
 }
 
-func (c *certManager) InitCertificateStatusDate(ctx context.Context, logger logr.Logger) error {
-	// If CertificateExpireDate is empty, assign current certificate renewal time
-	if c.cluster.Status.CertificateExpireDate == "" {
-
-		cert, err := c.GetCertificate(ctx, logger)
-
-		if err != nil {
-			logger.Error(err, "No certificate found")
-			return err
-		}
-
-		// Set certificate renewal time format RFC3339: “2006-01-02T15:04:05Z07:00”
-		certRenewalTime := cert.Status.RenewalTime.Time.Format(time.RFC3339)
-
-		if err := k8sutil.UpdateCRStatus(c.client, c.cluster, certRenewalTime, logger); err != nil {
-			logger.Error(err, "Fail to update CertificateExpireDate")
-			return err
-		}
-	}
-	return nil
-}
-
-func (c *certManager) IsCertificateExpired(ctx context.Context, logger logr.Logger) bool {
+func (c *certManager) IsCertificateExpired(ctx context.Context, pod *corev1.Pod, logger logr.Logger) bool {
 	logger.Info("Checking if the certificate is expired")
 
 	// Get certificate object
@@ -74,14 +52,12 @@ func (c *certManager) IsCertificateExpired(ctx context.Context, logger logr.Logg
 
 	// Get certificate renewal w/ time format RFC3339: “2006-01-02T15:04:05Z07:00”
 	certRenewalTime := cert.Status.RenewalTime.Time.Format(time.RFC3339)
-
-	certificateExpireDate := c.cluster.Status.CertificateExpireDate
-
-	// Compare with certRenewalTime, if != will trigger rolling upgrade
-	return certificateExpireDate != certRenewalTime
+	// certRenewalTime := ""
+	certificateExpireDate := c.cluster.Status.NodesState[pod.Labels["nodeId"]].CertificateExpireDate
+	return string(certificateExpireDate) != certRenewalTime
 }
 
-func (c *certManager) UpdateCertificateStatusDate(ctx context.Context, logger logr.Logger) error {
+func (c *certManager) UpdateCertificateStatusDate(ctx context.Context, pod *corev1.Pod, logger logr.Logger) error {
 	cert, err := c.GetCertificate(ctx, logger)
 
 	if err != nil {
@@ -89,13 +65,15 @@ func (c *certManager) UpdateCertificateStatusDate(ctx context.Context, logger lo
 		return err
 	}
 
+	nodeId := pod.Labels["nodeId"]
+
 	// Get certificate renewal w/ time format RFC3339: “2006-01-02T15:04:05Z07:00”
-	certRenewalTime := cert.Status.RenewalTime.Time.Format(time.RFC3339)
+	certRenewalTime := v1alpha1.CertificateExpireDate(cert.Status.RenewalTime.Time.Format(time.RFC3339))
+	// certRenewalTime := v1alpha1.CertificateExpireDate("")
+	certificateExpireDate := c.cluster.Status.NodesState[nodeId].CertificateExpireDate
 
-	certificateExpireDate := c.cluster.Status.CertificateExpireDate
-
-	if certificateExpireDate != certRenewalTime {
-		if err := k8sutil.UpdateCRStatus(c.client, c.cluster, certRenewalTime, logger); err != nil {
+	if string(certificateExpireDate) != string(certRenewalTime) {
+		if err := k8sutil.UpdateNodeStatus(c.client, []string{nodeId}, c.cluster, certRenewalTime, logger); err != nil {
 			logger.Error(err, "Fail to update CertificateExpireDate")
 			return err
 		}

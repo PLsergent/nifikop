@@ -504,8 +504,6 @@ type NifiClusterStatus struct {
 	RootProcessGroupId string `json:"rootProcessGroupId,omitempty"`
 	// PrometheusReportingTask contains the status of the prometheus reporting task managed by the operator
 	PrometheusReportingTask PrometheusReportingTaskStatus `json:"prometheusReportingTask,omitempty"`
-	// Certificate expire date contains the date when the certificate should be renewed
-	CertificateExpireDate string `json:"certificateExpireDate,omitempty"`
 }
 
 type PrometheusReportingTaskStatus struct {

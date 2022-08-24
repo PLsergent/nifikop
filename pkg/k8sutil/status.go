@@ -43,6 +43,8 @@ func UpdateNodeStatus(c client.Client, nodeIds []string, cluster *v1alpha1.NifiC
 				cluster.Status.NodesState = map[string]v1alpha1.NodeState{nodeId: {InitClusterNode: s}}
 			case bool:
 				cluster.Status.NodesState = map[string]v1alpha1.NodeState{nodeId: {PodIsReady: s}}
+			case v1alpha1.CertificateExpireDate:
+				cluster.Status.NodesState = map[string]v1alpha1.NodeState{nodeId: {CertificateExpireDate: s}}
 			}
 		} else if val, ok := cluster.Status.NodesState[nodeId]; ok {
 			switch s := state.(type) {
@@ -54,6 +56,8 @@ func UpdateNodeStatus(c client.Client, nodeIds []string, cluster *v1alpha1.NifiC
 				val.InitClusterNode = s
 			case bool:
 				val.PodIsReady = s
+			case v1alpha1.CertificateExpireDate:
+				val.CertificateExpireDate = s
 			}
 			cluster.Status.NodesState[nodeId] = val
 		} else {
@@ -66,6 +70,8 @@ func UpdateNodeStatus(c client.Client, nodeIds []string, cluster *v1alpha1.NifiC
 				cluster.Status.NodesState[nodeId] = v1alpha1.NodeState{InitClusterNode: s}
 			case bool:
 				cluster.Status.NodesState[nodeId] = v1alpha1.NodeState{PodIsReady: s}
+			case v1alpha1.CertificateExpireDate:
+				cluster.Status.NodesState[nodeId] = v1alpha1.NodeState{CertificateExpireDate: s}
 			}
 		}
 	}
@@ -185,8 +191,6 @@ func UpdateCRStatus(c client.Client, cluster *v1alpha1.NifiCluster, state interf
 	switch s := state.(type) {
 	case v1alpha1.ClusterState:
 		cluster.Status.State = s
-	case string:
-		cluster.Status.CertificateExpireDate = s
 	}
 
 	err := c.Status().Update(context.Background(), cluster)
@@ -207,8 +211,6 @@ func UpdateCRStatus(c client.Client, cluster *v1alpha1.NifiCluster, state interf
 		switch s := state.(type) {
 		case v1alpha1.ClusterState:
 			cluster.Status.State = s
-		case string:
-			cluster.Status.CertificateExpireDate = s
 		}
 
 		err = updateClusterStatus(c, cluster)

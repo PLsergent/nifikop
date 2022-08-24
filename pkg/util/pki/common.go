@@ -11,6 +11,7 @@ import (
 	"github.com/konpyutaika/nifikop/pkg/resources/templates"
 	certutil "github.com/konpyutaika/nifikop/pkg/util/cert"
 	"github.com/konpyutaika/nifikop/pkg/util/nifi"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -55,16 +56,13 @@ type Manager interface {
 	GetControllerTLSConfig() (*tls.Config, error)
 
 	// IsCertificateExpired return true is the certificate of the cluster has expired
-	IsCertificateExpired(ctx context.Context, logger logr.Logger) bool
-
-	// InitCertificateStatusDate initiate the certificate expire date in the cluster status
-	InitCertificateStatusDate(ctx context.Context, logger logr.Logger) error
+	IsCertificateExpired(ctx context.Context, pod *corev1.Pod, logger logr.Logger) bool
 
 	// GetCertificate get the cert manager certificate object
 	GetCertificate(ctx context.Context, logger logr.Logger) (certv1.Certificate, error)
 
 	// UpdateCertificateStatusDate update certificate expire date after rolling upgrade
-	UpdateCertificateStatusDate(ctx context.Context, logger logr.Logger) error
+	UpdateCertificateStatusDate(ctx context.Context, pod *corev1.Pod, logger logr.Logger) error
 }
 
 // UserCertificate is a struct representing the key components of a user TLS certificate

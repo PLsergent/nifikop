@@ -8275,14 +8275,14 @@ spec:
           status:
             description: NifiClusterStatus defines the observed state of NifiCluster
             properties:
-              certificateExpireDate:
-                description: Certificate expire date contains the date when the certificate
-                  should be renewed
-                type: string
               nodesState:
                 additionalProperties:
                   description: NifiState holds information about nifi state
                   properties:
+                    certificateExpireDate:
+                      description: Certificate expire date contains the date when
+                        the certificate should be renewed
+                      type: string
                     configurationState:
                       description: ConfigurationState holds info about the config
                       type: string

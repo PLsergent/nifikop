@@ -179,6 +179,7 @@ func (r *Reconciler) Reconcile(log logr.Logger) error {
 				return errors.WrapIfWithDetails(err, "could not update status for node(s)",
 					"id(s)", o.(*corev1.Pod).Labels["nodeId"])
 			}
+			pki.GetPKIManager(r.Client, r.NifiCluster).UpdateCertificateStatusDate(context.TODO(), o.(*corev1.Pod), log)
 		}
 	}
 
@@ -611,7 +612,7 @@ func (r *Reconciler) reconcileNifiPod(log logr.Logger, desiredPod *corev1.Pod) (
 		} else if patchResult.IsEmpty() {
 			if !k8sutil.IsPodTerminatedOrShutdown(currentPod) &&
 				r.NifiCluster.Status.NodesState[currentPod.Labels["nodeId"]].ConfigurationState == v1alpha1.ConfigInSync &&
-				!pki.GetPKIManager(r.Client, r.NifiCluster).IsCertificateExpired(context.TODO(), log) {
+				!pki.GetPKIManager(r.Client, r.NifiCluster).IsCertificateExpired(context.TODO(), currentPod, log) {
 
 				if val, found := r.NifiCluster.Status.NodesState[desiredPod.Labels["nodeId"]]; found &&
 					val.GracefulActionState.State == v1alpha1.GracefulUpscaleRunning &&
